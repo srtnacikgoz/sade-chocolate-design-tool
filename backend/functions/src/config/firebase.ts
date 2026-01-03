@@ -1,8 +1,13 @@
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
 
-// Firebase Admin SDK'yı başlat
-if (!admin.apps.length) {
-  admin.initializeApp();
+// Firebase Admin SDK'yı başlat (emulator otomatik başlatır)
+try {
+  if (!admin.apps || admin.apps.length === 0) {
+    admin.initializeApp();
+  }
+} catch (error) {
+  // Emulator zaten başlatmış olabilir, sessizce geç
+  console.log('Firebase admin already initialized');
 }
 
 // Firestore instance

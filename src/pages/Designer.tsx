@@ -4,8 +4,9 @@ import type { BoxDimensions, BoxType } from '../lib/box-generator';
 import { calculateCost, MATERIALS, FINISHES } from '../lib/cost-calculator';
 import { exportToPdf } from '../lib/pdf-exporter';
 import BoxPreview from '../components/BoxPreview';
+import Box3D from '../components/Box3D';
 import CostSummary from '../components/CostSummary';
-import { Settings2, Download, Share2, Loader2 } from 'lucide-react';
+import { Settings2, Download, Share2, Loader2, Box, Eye } from 'lucide-react';
 
 const Designer = () => {
     const [dimensions, setDimensions] = useState<BoxDimensions>({ width: 80, height: 120, depth: 40 });
@@ -13,7 +14,10 @@ const Designer = () => {
     const [materialId, setMaterialId] = useState(MATERIALS[0].id);
     const [finishId, setFinishId] = useState(FINISHES[0].id);
     const [quantity, setQuantity] = useState(500);
+    const [customColor, setCustomColor] = useState('#F5F5F0');
+    const [customTexture, setCustomTexture] = useState<string | undefined>(undefined);
     const [isExporting, setIsExporting] = useState(false);
+    const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
     const svgRef = useRef<SVGSVGElement>(null);
 
     const { viewBox, paths } = useMemo(() =>
@@ -43,6 +47,14 @@ const Designer = () => {
             alert('Failed to export PDF. Please try again.');
         } finally {
             setIsExporting(false);
+        }
+    };
+
+    const handleTextureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            setCustomTexture(url);
         }
     };
 
@@ -89,6 +101,41 @@ const Designer = () => {
                                     <option value="gift-box">Gift Box</option>
                                     <option value="truffle-box">Truffle Box</option>
                                 </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider mb-4">Design</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-stone-500 mb-1">Base Color</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="color"
+                                        value={customColor}
+                                        onChange={(e) => setCustomColor(e.target.value)}
+                                        className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+                                    />
+                                    <span className="text-xs text-stone-500 font-mono">{customColor}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-stone-500 mb-1">Upload Texture/Logo</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleTextureUpload}
+                                    className="w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-pink file:text-brand-dark hover:file:bg-brand-pink/80"
+                                />
+                                {customTexture && (
+                                    <button
+                                        onClick={() => setCustomTexture(undefined)}
+                                        className="mt-2 text-xs text-red-500 hover:underline"
+                                    >
+                                        Remove Texture
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </section>
@@ -176,8 +223,49 @@ const Designer = () => {
 
                 {/* Main Preview Area */}
                 <div className="flex-1 bg-stone-100 p-8 flex flex-col min-w-0">
+                    <div className="flex items-center justify-center mb-6">
+                        <div className="bg-white p-1 rounded-lg border border-stone-200 shadow-sm flex">
+                            <button
+                                onClick={() => setViewMode('2d')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === '2d'
+                                    ? 'bg-brand-dark text-white shadow-sm'
+                                    : 'text-stone-500 hover:bg-stone-50'
+                                    }`}
+                            >
+                                <Eye size={16} />
+                                2D Preview
+                            </button>
+                            <button
+                                onClick={() => setViewMode('3d')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === '3d'
+                                    ? 'bg-brand-dark text-white shadow-sm'
+                                    : 'text-stone-500 hover:bg-stone-50'
+                                    }`}
+                            >
+                                <Box size={16} />
+                                3D Preview
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="flex-1 min-h-0">
-                        <BoxPreview ref={svgRef} viewBox={viewBox} paths={paths} />
+                        {viewMode === '2d' ? (
+                            <BoxPreview
+                                ref={svgRef}
+                                viewBox={viewBox}
+                                paths={paths}
+                                customColor={customColor}
+                                customTexture={customTexture}
+                            />
+                        ) : (
+                            <Box3D
+                                dimensions={dimensions}
+                                boxType={boxType}
+                                customColor={customColor}
+                                customTexture={customTexture}
+                                finishId={finishId}
+                            />
+                        )}
                     </div>
                 </div>
 

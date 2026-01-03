@@ -31,7 +31,7 @@ export function generateBoxDieLine(type: BoxType, dimensions: BoxDimensions): { 
     const CUT_STYLE = { stroke: CUT_COLOR, strokeWidth: 1, type: 'cut' as const };
     const FOLD_STYLE = { stroke: FOLD_COLOR, strokeWidth: 1, strokeDasharray: '4 2', type: 'fold' as const };
 
-    if (type === 'gift-box') {
+    if (type === 'gift-box' || type === 'truffle-box') {
         // Standard Reverse Tuck End box (simplified)
         // Layout: [Glue Tab] [Side 1 (d)] [Front (w)] [Side 2 (d)] [Back (w)]
         // Height is the vertical dimension of main panels.
@@ -133,6 +133,24 @@ export function generateBoxDieLine(type: BoxType, dimensions: BoxDimensions): { 
             path: gluePath + s1Bottom + fBottom + s2Bottom + bBottom + rightEdge + bTop + s2Top + fTop + s1Top + close,
             ...CUT_STYLE
         });
+
+        // For Truffle Box, maybe add a window?
+        if (type === 'truffle-box') {
+            // Add a window on the Front panel
+            // Front panel starts at: startX + glueTabWidth + d
+            const frontX = startX + glueTabWidth + d;
+            const windowMargin = 15;
+            const windowWidth = w - (2 * windowMargin);
+            const windowHeight = h - (2 * windowMargin);
+
+            if (windowWidth > 0 && windowHeight > 0) {
+                paths.push({
+                    id: 'window-cut',
+                    path: `M ${frontX + windowMargin} ${startY + windowMargin} h ${windowWidth} v ${windowHeight} h -${windowWidth} Z`,
+                    ...CUT_STYLE
+                });
+            }
+        }
 
         const viewBox = `0 0 ${totalWidth + 20} ${totalHeight + 20}`;
         return { viewBox, paths };

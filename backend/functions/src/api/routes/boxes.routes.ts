@@ -17,10 +17,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     res.json({
       success: true,
-      data: {
-        items: boxes,
-        total: boxes.length
-      }
+      data: boxes
     });
   } catch (error) {
     next(error);

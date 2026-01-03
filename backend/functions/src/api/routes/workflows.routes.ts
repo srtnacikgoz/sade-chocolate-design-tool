@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { workflowService } from '../../services/workflowService';
+import { workflowService } from '../../services/workflowService.js';
 
 const router = Router();
 

@@ -21,11 +21,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+// Routes (Cloud Function zaten /api path'inde, tekrar /api eklemeye gerek yok)
 app.use('/health', healthRoutes);
-app.use('/api/v1/designs', designsRoutes);
-app.use('/api/v1/boxes', boxesRoutes);
-app.use('/api/v1/workflows', workflowsRoutes);
+app.use('/v1/designs', designsRoutes);
+app.use('/v1/boxes', boxesRoutes);
+app.use('/v1/workflows', workflowsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

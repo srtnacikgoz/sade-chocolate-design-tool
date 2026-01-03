@@ -10,7 +10,7 @@ export const workflowService = {
    * Yeni workflow başlatır
    */
   startWorkflow: async (designId: string, type: Workflow['type'] = 'full-pipeline'): Promise<Workflow> => {
-    const response = await apiClient.post<ApiResponse<Workflow>>('/api/v1/workflows/start', {
+    const response = await apiClient.post<ApiResponse<Workflow>>('/v1/workflows/start', {
       designId,
       type,
     });
@@ -27,7 +27,7 @@ export const workflowService = {
    */
   getWorkflowStatus: async (workflowId: string): Promise<Partial<Workflow>> => {
     const response = await apiClient.get<ApiResponse<Partial<Workflow>>>(
-      `/api/v1/workflows/${workflowId}/status`
+      `/v1/workflows/${workflowId}/status`
     );
 
     if (!response.data.success || !response.data.data) {
@@ -41,7 +41,7 @@ export const workflowService = {
    * Workflow detaylarını getirir
    */
   getWorkflowById: async (workflowId: string): Promise<Workflow> => {
-    const response = await apiClient.get<ApiResponse<Workflow>>(`/api/v1/workflows/${workflowId}`);
+    const response = await apiClient.get<ApiResponse<Workflow>>(`/v1/workflows/${workflowId}`);
 
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.message || 'Workflow bulunamadı');
@@ -58,7 +58,7 @@ export const workflowService = {
     designId?: string;
     limit?: number;
   }): Promise<Workflow[]> => {
-    const response = await apiClient.get<ApiResponse<Workflow[]>>('/api/v1/workflows', {
+    const response = await apiClient.get<ApiResponse<Workflow[]>>('/v1/workflows', {
       params,
     });
 
@@ -74,7 +74,7 @@ export const workflowService = {
    */
   pauseWorkflow: async (workflowId: string): Promise<void> => {
     const response = await apiClient.post<ApiResponse<void>>(
-      `/api/v1/workflows/${workflowId}/pause`
+      `/v1/workflows/${workflowId}/pause`
     );
 
     if (!response.data.success) {
@@ -87,7 +87,7 @@ export const workflowService = {
    */
   resumeWorkflow: async (workflowId: string): Promise<void> => {
     const response = await apiClient.post<ApiResponse<void>>(
-      `/api/v1/workflows/${workflowId}/resume`
+      `/v1/workflows/${workflowId}/resume`
     );
 
     if (!response.data.success) {
@@ -99,7 +99,7 @@ export const workflowService = {
    * Workflow'u siler
    */
   deleteWorkflow: async (workflowId: string): Promise<void> => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/api/v1/workflows/${workflowId}`);
+    const response = await apiClient.delete<ApiResponse<void>>(`/v1/workflows/${workflowId}`);
 
     if (!response.data.success) {
       throw new Error(response.data.message || 'Workflow silinemedi');

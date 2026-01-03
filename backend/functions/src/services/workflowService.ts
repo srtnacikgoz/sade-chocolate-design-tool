@@ -1,6 +1,6 @@
-import { db } from '../config/firebase';
-import { Workflow, WorkflowStep } from '../types/workflow.types';
-import { WorkflowOrchestrator } from './workflowOrchestrator';
+import { db } from '../config/firebase.js';
+import { Workflow, WorkflowStep } from '../types/workflow.types.js';
+import { WorkflowOrchestrator } from './workflowOrchestrator.js';
 
 /**
  * Workflow Service

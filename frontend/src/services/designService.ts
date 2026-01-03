@@ -11,7 +11,7 @@ export const designService = {
     boxId: string;
     preferences?: Record<string, any>;
   }): Promise<Design> => {
-    const response = await apiClient.post<ApiResponse<Design>>('/api/v1/designs', data);
+    const response = await apiClient.post<ApiResponse<Design>>('/v1/designs', data);
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.message || 'Failed to create design');
     }
@@ -38,7 +38,7 @@ export const designService = {
     limit?: number;
     page?: number;
   }): Promise<PaginatedResponse<Design>> => {
-    const response = await apiClient.get<PaginatedResponse<Design>>('/api/v1/designs', {
+    const response = await apiClient.get<PaginatedResponse<Design>>('/v1/designs', {
       params,
     });
     if (!response.data.success) {
@@ -91,7 +91,7 @@ export const boxService = {
    * List all box templates
    */
   listBoxes: async (type?: string): Promise<BoxTemplate[]> => {
-    const response = await apiClient.get<ApiResponse<BoxTemplate[]>>('/api/v1/boxes', {
+    const response = await apiClient.get<ApiResponse<BoxTemplate[]>>('/v1/boxes', {
       params: type ? { type } : undefined,
     });
     if (!response.data.success || !response.data.data) {
