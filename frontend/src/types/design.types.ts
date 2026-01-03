@@ -132,3 +132,17 @@ export interface CostScenario {
   totalCost: number;
   savingsPercent?: number;
 }
+
+// Box Template Interface
+export interface BoxTemplate {
+  id: string;
+  name: string;
+  dimensions: {
+    length: number;
+    width: number;
+    height: number;
+  };
+  type: string;
+  capacity: number;
+  description: string;
+}

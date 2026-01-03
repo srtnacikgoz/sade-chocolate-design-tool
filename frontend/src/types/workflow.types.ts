@@ -16,6 +16,7 @@ export interface WorkflowStep {
   name: 'trend' | 'visual' | 'technical' | 'cost';
   displayName: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  icon: string;
   agentName: string;
   startedAt?: Date;
   completedAt?: Date;
