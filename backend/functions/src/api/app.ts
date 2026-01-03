@@ -6,6 +6,7 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import healthRoutes from './routes/health.routes.js';
 import designsRoutes from './routes/designs.routes.js';
 import boxesRoutes from './routes/boxes.routes.js';
+import workflowsRoutes from './routes/workflows.routes.js';
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use((req, res, next) => {
 app.use('/health', healthRoutes);
 app.use('/api/v1/designs', designsRoutes);
 app.use('/api/v1/boxes', boxesRoutes);
+app.use('/api/v1/workflows', workflowsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

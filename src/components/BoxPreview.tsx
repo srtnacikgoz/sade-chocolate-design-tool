@@ -1,4 +1,4 @@
-import React from 'react';
+import { forwardRef } from 'react';
 import type { DieLine } from '../lib/box-generator';
 
 interface BoxPreviewProps {
@@ -6,7 +6,7 @@ interface BoxPreviewProps {
     paths: DieLine[];
 }
 
-const BoxPreview: React.FC<BoxPreviewProps> = ({ viewBox, paths }) => {
+const BoxPreview = forwardRef<SVGSVGElement, BoxPreviewProps>(({ viewBox, paths }, ref) => {
     return (
         <div className="w-full h-full flex items-center justify-center bg-stone-50 rounded-xl border border-stone-200 p-8 overflow-hidden relative group">
             <div className="absolute inset-0 grid grid-cols-[repeat(40,minmax(0,1fr))] grid-rows-[repeat(40,minmax(0,1fr))] opacity-[0.03] pointer-events-none">
@@ -17,6 +17,7 @@ const BoxPreview: React.FC<BoxPreviewProps> = ({ viewBox, paths }) => {
             </div>
 
             <svg
+                ref={ref}
                 viewBox={viewBox}
                 className="w-full h-full max-w-2xl max-h-[70vh] drop-shadow-xl transition-all duration-700 ease-spring"
                 preserveAspectRatio="xMidYMid meet"
@@ -40,6 +41,8 @@ const BoxPreview: React.FC<BoxPreviewProps> = ({ viewBox, paths }) => {
             </div>
         </div>
     );
-};
+});
+
+BoxPreview.displayName = 'BoxPreview';
 
 export default BoxPreview;

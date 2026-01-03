@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { generateBoxDieLine } from '../lib/box-generator';
 import type { BoxDimensions, BoxType } from '../lib/box-generator';
 import { calculateCost, MATERIALS, FINISHES } from '../lib/cost-calculator';
+import { exportToPdf } from '../lib/pdf-exporter';
 import BoxPreview from '../components/BoxPreview';
 import CostSummary from '../components/CostSummary';
-import { Settings2, Download, Share2 } from 'lucide-react';
+import { Settings2, Download, Share2, Loader2 } from 'lucide-react';
 
 const Designer = () => {
     const [dimensions, setDimensions] = useState<BoxDimensions>({ width: 80, height: 120, depth: 40 });
@@ -12,6 +13,8 @@ const Designer = () => {
     const [materialId, setMaterialId] = useState(MATERIALS[0].id);
     const [finishId, setFinishId] = useState(FINISHES[0].id);
     const [quantity, setQuantity] = useState(500);
+    const [isExporting, setIsExporting] = useState(false);
+    const svgRef = useRef<SVGSVGElement>(null);
 
     const { viewBox, paths } = useMemo(() =>
         generateBoxDieLine(boxType, dimensions),
@@ -28,6 +31,21 @@ const Designer = () => {
         setDimensions(prev => ({ ...prev, [key]: num }));
     };
 
+    const handleExport = async () => {
+        if (!svgRef.current) return;
+
+        try {
+            setIsExporting(true);
+            const filename = `sade-box-${boxType}-${dimensions.width}x${dimensions.height}x${dimensions.depth}.pdf`;
+            await exportToPdf(svgRef.current, filename);
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('Failed to export PDF. Please try again.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col">
             <header className="bg-white border-b border-stone-200 px-8 py-4 flex items-center justify-between shrink-0">
@@ -40,9 +58,13 @@ const Designer = () => {
                         <Share2 size={16} />
                         Share
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-brand-dark text-white hover:bg-stone-800 rounded-lg transition-colors shadow-sm">
-                        <Download size={16} />
-                        Export SVG
+                    <button
+                        onClick={handleExport}
+                        disabled={isExporting}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-brand-dark text-white hover:bg-stone-800 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                        {isExporting ? 'Exporting...' : 'Export PDF'}
                     </button>
                 </div>
             </header>
@@ -155,7 +177,7 @@ const Designer = () => {
                 {/* Main Preview Area */}
                 <div className="flex-1 bg-stone-100 p-8 flex flex-col min-w-0">
                     <div className="flex-1 min-h-0">
-                        <BoxPreview viewBox={viewBox} paths={paths} />
+                        <BoxPreview ref={svgRef} viewBox={viewBox} paths={paths} />
                     </div>
                 </div>
 

@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useDesignStore } from '../stores/designStore';
 import { useWorkflowStore } from '../stores/workflowStore';
 import { designService } from '../services/designService';
+import { workflowService } from '../services/workflowService';
 import type { Design } from '../types/design.types';
 import type { WorkflowStep } from '../types/workflow.types';
 
@@ -88,10 +89,8 @@ export const useDesignWorkflow = (designId?: string) => {
    */
   const startWorkflowMutation = useMutation({
     mutationFn: async (designId: string) => {
-      // TODO: Call workflow API endpoint when implemented
-      // For now, this is a placeholder
-      console.log('Starting workflow for design:', designId);
-      return { workflowId: 'placeholder' };
+      // Gerçek workflow API'sini çağır
+      return await workflowService.startWorkflow(designId);
     },
   });
 
