@@ -1,0 +1,181 @@
+{
+  "lastUpdated": "2026-01-03T00:00:00Z",
+  "currency": "TRY",
+  "materials": [
+    {
+      "id": "mukavva-1.0",
+      "name": "Mukavva 1.0mm",
+      "type": "mukavva",
+      "thickness": 1.0,
+      "unit": "m²",
+      "price": 48.00,
+      "minOrder": 10,
+      "notes": "Hafif kutular için uygun"
+    },
+    {
+      "id": "mukavva-1.5",
+      "name": "Mukavva 1.5mm",
+      "type": "mukavva",
+      "thickness": 1.5,
+      "unit": "m²",
+      "price": 52.00,
+      "minOrder": 10,
+      "notes": "Standart premium kutular için önerilen"
+    },
+    {
+      "id": "mukavva-2.0",
+      "name": "Mukavva 2.0mm",
+      "type": "mukavva",
+      "thickness": 2.0,
+      "unit": "m²",
+      "price": 58.00,
+      "minOrder": 10,
+      "notes": "Ekstra dayanıklı kutular için"
+    },
+    {
+      "id": "kuse-mat-300",
+      "name": "Kuşe Mat 300gr",
+      "type": "kuşe",
+      "grammage": 300,
+      "unit": "m²",
+      "price": 28.00,
+      "minOrder": 25,
+      "notes": "Kaplama kağıdı - mat finish"
+    },
+    {
+      "id": "kuse-mat-350",
+      "name": "Kuşe Mat 350gr",
+      "type": "kuşe",
+      "grammage": 350,
+      "unit": "m²",
+      "price": 32.00,
+      "minOrder": 25,
+      "notes": "Kaplama kağıdı - premium mat"
+    },
+    {
+      "id": "kuse-parlak-300",
+      "name": "Kuşe Parlak 300gr",
+      "type": "kuşe",
+      "grammage": 300,
+      "unit": "m²",
+      "price": 26.00,
+      "minOrder": 25,
+      "notes": "Kaplama kağıdı - parlak finish"
+    },
+    {
+      "id": "kraft-250",
+      "name": "Kraft 250gr",
+      "type": "kraft",
+      "grammage": 250,
+      "unit": "m²",
+      "price": 22.00,
+      "minOrder": 25,
+      "notes": "Doğal görünüm, sürdürülebilir"
+    }
+  ],
+  "printingTechniques": [
+    {
+      "id": "gold-foil-hot",
+      "name": "Altın Varak (Hot Foil)",
+      "technique": "hot-foil",
+      "color": "gold",
+      "unit": "per-item",
+      "price": 12.00,
+      "minOrder": 500,
+      "setupCost": 2500,
+      "notes": "Premium görünüm, klasik altın"
+    },
+    {
+      "id": "rose-gold-foil",
+      "name": "Rose Gold Varak",
+      "technique": "hot-foil",
+      "color": "rose-gold",
+      "unit": "per-item",
+      "price": 13.50,
+      "minOrder": 500,
+      "setupCost": 2500,
+      "notes": "Modern ve zarif"
+    },
+    {
+      "id": "silver-foil",
+      "name": "Gümüş Varak",
+      "technique": "hot-foil",
+      "color": "silver",
+      "unit": "per-item",
+      "price": 11.00,
+      "minOrder": 500,
+      "setupCost": 2500,
+      "notes": "Soğuk ton lüks görünüm"
+    },
+    {
+      "id": "emboss",
+      "name": "Gofre (Emboss)",
+      "technique": "emboss",
+      "unit": "per-item",
+      "price": 6.50,
+      "minOrder": 500,
+      "setupCost": 3500,
+      "notes": "Dokunsal lüks hissi"
+    },
+    {
+      "id": "deboss",
+      "name": "Kabartma (Deboss)",
+      "technique": "deboss",
+      "unit": "per-item",
+      "price": 6.50,
+      "minOrder": 500,
+      "setupCost": 3500,
+      "notes": "İçe doğru kabartma, zarif"
+    },
+    {
+      "id": "spot-uv",
+      "name": "Spot UV Lak",
+      "technique": "spot-uv",
+      "unit": "per-item",
+      "price": 4.00,
+      "minOrder": 1000,
+      "setupCost": 1500,
+      "notes": "Parlak vurgular, modern"
+    },
+    {
+      "id": "soft-touch-lamination",
+      "name": "Soft-Touch Laminasyon",
+      "technique": "lamination",
+      "unit": "per-item",
+      "price": 3.50,
+      "minOrder": 1000,
+      "setupCost": 800,
+      "notes": "Kadife dokunuş, premium hissi"
+    }
+  ],
+  "labor": {
+    "cutting": {
+      "name": "Kesim ve Biga",
+      "unit": "per-item",
+      "price": 2.00,
+      "notes": "Die-line kesim ve katlanma çizgileri"
+    },
+    "gluing": {
+      "name": "Yapıştırma ve Montaj",
+      "unit": "per-item",
+      "price": 1.50,
+      "notes": "El işçiliği gerektirir"
+    },
+    "qualityControl": {
+      "name": "Kalite Kontrol",
+      "unit": "per-item",
+      "price": 0.50,
+      "notes": "Her kutu tek tek kontrol edilir"
+    }
+  },
+  "logistics": {
+    "desiRate": 3000,
+    "notes": "Desi = (En x Boy x Yükseklik) / 3000",
+    "cargoRatePerKg": 25.00,
+    "packagingMaterialPercentage": 0.05
+  },
+  "overhead": {
+    "percentage": 0.15,
+    "notes": "Genel giderler (enerji, kira, vb.) - %15"
+  }
+}

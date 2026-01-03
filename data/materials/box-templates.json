@@ -1,0 +1,118 @@
+{
+  "templates": [
+    {
+      "id": "gift-16",
+      "name": "Premium Gift Box - 16'lık",
+      "dimensions": {
+        "length": 250,
+        "width": 200,
+        "height": 50
+      },
+      "type": "gift",
+      "capacity": 16,
+      "recommendedMaterial": {
+        "paperType": "mukavva",
+        "thickness": 1.5,
+        "coating": "soft-touch",
+        "grammage": 350
+      },
+      "description": "Standart 16'lık premium hediye kutusu. En popüler boyut.",
+      "previewImage": "/assets/templates/gift-16.png"
+    },
+    {
+      "id": "gift-24",
+      "name": "Large Gift Box - 24'lük",
+      "dimensions": {
+        "length": 300,
+        "width": 240,
+        "height": 50
+      },
+      "type": "gift",
+      "capacity": 24,
+      "recommendedMaterial": {
+        "paperType": "mukavva",
+        "thickness": 2.0,
+        "coating": "soft-touch",
+        "grammage": 400
+      },
+      "description": "Büyük kapasiteli hediye kutusu. Özel günler için ideal.",
+      "previewImage": "/assets/templates/gift-24.png"
+    },
+    {
+      "id": "gift-9",
+      "name": "Compact Gift Box - 9'luk",
+      "dimensions": {
+        "length": 180,
+        "width": 180,
+        "height": 40
+      },
+      "type": "gift",
+      "capacity": 9,
+      "recommendedMaterial": {
+        "paperType": "mukavva",
+        "thickness": 1.5,
+        "coating": "mat",
+        "grammage": 300
+      },
+      "description": "Kompakt ve zarif. Küçük jestler için.",
+      "previewImage": "/assets/templates/gift-9.png"
+    },
+    {
+      "id": "truffle-12",
+      "name": "Truffle Box - 12'lik",
+      "dimensions": {
+        "length": 200,
+        "width": 160,
+        "height": 35
+      },
+      "type": "truffle",
+      "capacity": 12,
+      "recommendedMaterial": {
+        "paperType": "kuşe",
+        "thickness": 1.0,
+        "coating": "parlak",
+        "grammage": 300
+      },
+      "description": "Truffle çikolatalar için özel bölmeli kutu.",
+      "previewImage": "/assets/templates/truffle-12.png"
+    },
+    {
+      "id": "bar-single",
+      "name": "Single Bar Package",
+      "dimensions": {
+        "length": 160,
+        "width": 80,
+        "height": 10
+      },
+      "type": "bar",
+      "capacity": 1,
+      "recommendedMaterial": {
+        "paperType": "kraft",
+        "thickness": 0.5,
+        "coating": "none",
+        "grammage": 250
+      },
+      "description": "Tek çikolata barı için minimalist ambalaj.",
+      "previewImage": "/assets/templates/bar-single.png"
+    },
+    {
+      "id": "seasonal-valentines",
+      "name": "Valentine's Heart Box - 20'lik",
+      "dimensions": {
+        "length": 220,
+        "width": 220,
+        "height": 45
+      },
+      "type": "seasonal",
+      "capacity": 20,
+      "recommendedMaterial": {
+        "paperType": "mukavva",
+        "thickness": 1.5,
+        "coating": "soft-touch",
+        "grammage": 350
+      },
+      "description": "Sevgililer Günü özel kalp şeklinde kutu.",
+      "previewImage": "/assets/templates/seasonal-valentines.png"
+    }
+  ]
+}

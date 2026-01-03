@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/functions/node_modules/
+
+# Build outputs
+frontend/dist/
+backend/functions/lib/
+dist-ssr/
+*.js.map
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+backend/functions/.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+firebase-debug.log
+firebase-debug.*.log
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Firebase
+.firebase/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Output files (generated)
+output/svg/*.svg
+output/pdf/*.pdf
+output/cost-reports/*.json
+
+# Test coverage
+coverage/
+
+# OS
+Thumbs.db
