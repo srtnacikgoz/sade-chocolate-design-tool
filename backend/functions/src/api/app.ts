@@ -7,6 +7,7 @@ import healthRoutes from './routes/health.routes.js';
 import designsRoutes from './routes/designs.routes.js';
 import boxesRoutes from './routes/boxes.routes.js';
 import workflowsRoutes from './routes/workflows.routes.js';
+import exportRoutes from './routes/export.routes.js';
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/health', healthRoutes);
 app.use('/v1/designs', designsRoutes);
 app.use('/v1/boxes', boxesRoutes);
 app.use('/v1/workflows', workflowsRoutes);
+app.use('/v1/export', exportRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

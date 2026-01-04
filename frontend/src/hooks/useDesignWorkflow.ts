@@ -12,25 +12,27 @@ import type { WorkflowStep } from '../types/workflow.types';
  * Handles workflow creation, polling, and state updates
  */
 export const useDesignWorkflow = (designId?: string) => {
-  const { currentDesign, setCurrentDesign, updateDesign } = useDesignStore();
+  const { currentDesign, setCurrentDesign } = useDesignStore();
   const {
     steps,
-    isPolling,
-    pollingInterval,
     setSteps,
-    startPolling,
-    stopPolling,
     getProgressPercentage,
     getCompletedStepsCount,
   } = useWorkflowStore();
 
   /**
-   * Fetch design by ID
+   * Fetch design by ID with auto-refresh when polling is active
    */
-  const { data: design, isLoading: isLoadingDesign } = useQuery({
+  const { data: design, isLoading: isLoadingDesign, refetch: refetchDesign } = useQuery({
     queryKey: ['design', designId],
     queryFn: () => designService.getDesignById(designId!),
     enabled: !!designId,
+    // Auto-refresh every 5 seconds when polling is active
+    refetchInterval: (query) => {
+      const data = query.state.data as Design | undefined;
+      const shouldPoll = data?.status === 'processing';
+      return shouldPoll ? 5000 : false;
+    },
   });
 
   // Update store when design data changes
@@ -92,37 +94,13 @@ export const useDesignWorkflow = (designId?: string) => {
       // Gerçek workflow API'sini çağır
       return await workflowService.startWorkflow(designId);
     },
+    onSuccess: () => {
+      // Mutation başarılı olduğunda design'ı refresh et
+      // Bu design'ı 'processing' status'üne getirecek ve otomatik polling başlayacak
+      refetchDesign();
+      console.log('[useDesignWorkflow] Workflow started, refetching design');
+    },
   });
-
-  // Start polling when workflow mutation succeeds
-  useEffect(() => {
-    if (startWorkflowMutation.isSuccess) {
-      startPolling();
-    }
-  }, [startWorkflowMutation.isSuccess, startPolling]);
-
-  /**
-   * Poll for workflow updates
-   */
-  const { refetch: refetchDesign } = useQuery({
-    queryKey: ['design-poll', designId],
-    queryFn: () => designService.getDesignById(designId!),
-    enabled: isPolling && !!designId,
-    refetchInterval: pollingInterval,
-  });
-
-  // Update design when polling data changes
-  useEffect(() => {
-    if (isPolling && design) {
-      setCurrentDesign(design);
-      updateDesign(design.id, design as Partial<Design>);
-
-      // Check if workflow is complete
-      if (design.status === 'completed' || design.status === 'failed') {
-        stopPolling();
-      }
-    }
-  }, [design, isPolling, setCurrentDesign, updateDesign, stopPolling]);
 
   /**
    * Start workflow handler
@@ -134,13 +112,6 @@ export const useDesignWorkflow = (designId?: string) => {
     [startWorkflowMutation]
   );
 
-  /**
-   * Stop polling handler
-   */
-  const handleStopPolling = useCallback(() => {
-    stopPolling();
-  }, [stopPolling]);
-
   return {
     // Design data
     design: currentDesign || design,
@@ -150,11 +121,10 @@ export const useDesignWorkflow = (designId?: string) => {
     steps,
     progressPercentage: getProgressPercentage(),
     completedStepsCount: getCompletedStepsCount(),
-    isPolling,
+    isPolling: design?.status === 'processing', // Auto-polling when processing
 
     // Actions
     startWorkflow: handleStartWorkflow,
-    stopPolling: handleStopPolling,
     refetchDesign,
 
     // Workflow mutation state

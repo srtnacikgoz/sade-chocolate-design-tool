@@ -1,8 +1,28 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import multer from 'multer';
+import { Timestamp } from 'firebase-admin/firestore';
 import { designService } from '../../services/designService.js';
+import { storageService } from '../../services/storageService.js';
 import { CreateDesignInput } from '../../models/Design.js';
 
 const router = Router();
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept only specific file types
+    const allowedTypes = ['image/svg+xml', 'application/pdf', 'image/png', 'image/jpeg'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only SVG, PDF, PNG, and JPEG are allowed.'));
+    }
+  },
+});
 
 // POST /api/v1/designs - Create new design
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
@@ -100,6 +120,79 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
       success: true,
       data: design,
       message: 'Design updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/v1/designs/:id/upload - Upload custom design file
+router.post('/:id/upload', upload.single('file'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'NO_FILE',
+          message: 'No file uploaded'
+        }
+      });
+    }
+
+    // Check if design exists
+    const design = await designService.getById(id);
+    if (!design) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: `Design with ID ${id} not found`
+        }
+      });
+    }
+
+    // Upload file to Firebase Storage
+    const { fileUrl, filePath } = await storageService.uploadFile(
+      file.buffer,
+      file.originalname,
+      `designs/${id}`
+    );
+
+    // Determine file type from mimetype
+    const fileTypeMap: Record<string, 'svg' | 'pdf' | 'png' | 'jpg' | 'jpeg'> = {
+      'image/svg+xml': 'svg',
+      'application/pdf': 'pdf',
+      'image/png': 'png',
+      'image/jpeg': 'jpeg',
+    };
+    const fileType = fileTypeMap[file.mimetype] || 'png';
+
+    // Update design with customDesign info
+    const updatedDesign = await designService.update(id, {
+      customDesign: {
+        fileName: file.originalname,
+        fileUrl,
+        fileType,
+        fileSize: file.size,
+        uploadedAt: Timestamp.now(),
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        design: updatedDesign,
+        upload: {
+          fileName: file.originalname,
+          fileUrl,
+          fileType,
+          fileSize: file.size,
+        }
+      },
+      message: 'Custom design uploaded successfully'
     });
   } catch (error) {
     next(error);

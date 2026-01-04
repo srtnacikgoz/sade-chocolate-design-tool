@@ -20,7 +20,7 @@ const Designer = () => {
     const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
     const svgRef = useRef<SVGSVGElement>(null);
 
-    const { viewBox, paths } = useMemo(() =>
+    const { viewBox, paths, facePolygons } = useMemo(() =>
         generateBoxDieLine(boxType, dimensions),
         [boxType, dimensions]
     );
@@ -35,13 +35,36 @@ const Designer = () => {
         setDimensions(prev => ({ ...prev, [key]: num }));
     };
 
+    const [faceTextures, setFaceTextures] = useState<Record<string, string>>({});
+    const [selectedFace, setSelectedFace] = useState<string>('front-panel');
+    const [textureFit, setTextureFit] = useState<'cover' | 'contain' | 'stretch'>('cover');
+    const [textureScale, setTextureScale] = useState<number>(1);
+    const [textureOffset, setTextureOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+    const FACES = [
+        { id: 'front-panel', label: 'Front' },
+        { id: 'back-panel', label: 'Back' },
+        { id: 'top-flap', label: 'Top' },
+        { id: 'right-panel', label: 'Right Side' },
+        { id: 'left-panel', label: 'Left Side' },
+    ];
+
+    const box3DRef = useRef<{ captureSnapshot: () => string }>(null);
+
     const handleExport = async () => {
         if (!svgRef.current) return;
 
         try {
             setIsExporting(true);
             const filename = `sade-box-${boxType}-${dimensions.width}x${dimensions.height}x${dimensions.depth}.pdf`;
-            await exportToPdf(svgRef.current, filename);
+
+            // Capture 3D snapshot if available
+            let snapshotUrl = undefined;
+            if (box3DRef.current) {
+                snapshotUrl = box3DRef.current.captureSnapshot();
+            }
+
+            await exportToPdf(svgRef.current, filename, snapshotUrl);
         } catch (error) {
             console.error('Export failed:', error);
             alert('Failed to export PDF. Please try again.');
@@ -54,8 +77,25 @@ const Designer = () => {
         const file = e.target.files?.[0];
         if (file) {
             const url = URL.createObjectURL(file);
-            setCustomTexture(url);
+            // If in 3D mode, apply to selected face. In 2D mode, apply globally (or ask user).
+            // For now, let's keep the logic simple:
+            // If "Global" mode is active (or no specific face selected in UI logic), set customTexture.
+            // But we introduced a face selector.
+
+            setFaceTextures(prev => ({ ...prev, [selectedFace]: url }));
+
+            // Also set customTexture as a fallback or for 2D preview if needed
+            // But 2D preview doesn't support per-face yet.
+            // Let's keep customTexture for "All Over" and faceTextures for specific.
         }
+    };
+
+    const handleRemoveTexture = () => {
+        setFaceTextures(prev => {
+            const next = { ...prev };
+            delete next[selectedFace];
+            return next;
+        });
     };
 
     return (
@@ -120,20 +160,93 @@ const Designer = () => {
                                     <span className="text-xs text-stone-500 font-mono">{customColor}</span>
                                 </div>
                             </div>
+
+                            {/* Face Selector */}
                             <div>
-                                <label className="block text-xs font-medium text-stone-500 mb-1">Upload Texture/Logo</label>
+                                <label className="block text-xs font-medium text-stone-500 mb-2">Target Face</label>
+                                <div className="grid grid-cols-3 gap-2 mb-4">
+                                    {FACES.map(face => (
+                                        <button
+                                            key={face.id}
+                                            onClick={() => setSelectedFace(face.id)}
+                                            className={`px-2 py-1 text-xs rounded border transition-colors ${selectedFace === face.id
+                                                ? 'bg-brand-dark text-white border-brand-dark'
+                                                : 'bg-white text-stone-600 border-stone-200 hover:border-brand-dark'
+                                                }`}
+                                        >
+                                            {face.label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <label className="block text-xs font-medium text-stone-500 mb-1">
+                                    Upload Texture for {FACES.find(f => f.id === selectedFace)?.label}
+                                </label>
                                 <input
                                     type="file"
                                     accept="image/*"
                                     onChange={handleTextureUpload}
                                     className="w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-pink file:text-brand-dark hover:file:bg-brand-pink/80"
                                 />
-                                {customTexture && (
+
+                                <div className="mt-2">
+                                    <label className="block text-xs font-medium text-stone-500 mb-1">Texture Fit</label>
+                                    <select
+                                        value={textureFit}
+                                        onChange={(e) => setTextureFit(e.target.value as any)}
+                                        className="w-full px-2 py-1 text-xs border border-stone-200 rounded focus:outline-none focus:ring-1 focus:ring-brand-pink/50 bg-white"
+                                    >
+                                        <option value="cover">Cover (Crop to fit)</option>
+                                        <option value="contain">Contain (Show all)</option>
+                                        <option value="stretch">Stretch (Fill)</option>
+                                    </select>
+                                </div>
+
+                                <div className="mt-4 space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-stone-500 mb-1">
+                                            Scale ({Math.round(textureScale * 100)}%)
+                                        </label>
+                                        <input
+                                            type="range"
+                                            min="0.1"
+                                            max="3"
+                                            step="0.1"
+                                            value={textureScale}
+                                            onChange={(e) => setTextureScale(parseFloat(e.target.value))}
+                                            className="w-full h-1 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-brand-dark"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-medium text-stone-500 mb-1">Offset X</label>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={textureOffset.x}
+                                                onChange={(e) => setTextureOffset(prev => ({ ...prev, x: parseFloat(e.target.value) }))}
+                                                className="w-full px-2 py-1 text-xs border border-stone-200 rounded"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-stone-500 mb-1">Offset Y</label>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={textureOffset.y}
+                                                onChange={(e) => setTextureOffset(prev => ({ ...prev, y: parseFloat(e.target.value) }))}
+                                                className="w-full px-2 py-1 text-xs border border-stone-200 rounded"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                {faceTextures[selectedFace] && (
                                     <button
-                                        onClick={() => setCustomTexture(undefined)}
+                                        onClick={handleRemoveTexture}
                                         className="mt-2 text-xs text-red-500 hover:underline"
                                     >
-                                        Remove Texture
+                                        Remove Texture from {FACES.find(f => f.id === selectedFace)?.label}
                                     </button>
                                 )}
                             </div>
@@ -254,16 +367,26 @@ const Designer = () => {
                                 ref={svgRef}
                                 viewBox={viewBox}
                                 paths={paths}
+                                facePolygons={facePolygons}
                                 customColor={customColor}
                                 customTexture={customTexture}
+                                faceTextures={faceTextures}
+                                textureFit={textureFit}
+                                textureScale={textureScale}
+                                textureOffset={textureOffset}
                             />
                         ) : (
                             <Box3D
+                                ref={box3DRef}
                                 dimensions={dimensions}
                                 boxType={boxType}
                                 customColor={customColor}
                                 customTexture={customTexture}
+                                faceTextures={faceTextures}
                                 finishId={finishId}
+                                textureFit={textureFit}
+                                textureScale={textureScale}
+                                textureOffset={textureOffset}
                             />
                         )}
                     </div>

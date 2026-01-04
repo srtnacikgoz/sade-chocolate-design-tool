@@ -3,8 +3,8 @@ import cors from 'cors';
 const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
   'http://localhost:5000', // Firebase hosting emulator
-  'https://sadevardiya.web.app',
-  'https://sadevardiya.firebaseapp.com'
+  'https://sade-design-tool.web.app',
+  'https://sade-design-tool.firebaseapp.com'
 ];
 
 export const corsMiddleware = cors({

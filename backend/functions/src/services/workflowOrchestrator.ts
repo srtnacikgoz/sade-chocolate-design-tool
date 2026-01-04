@@ -1,6 +1,8 @@
 import { db } from '../config/firebase.js';
 import { Workflow, WorkflowStep } from '../types/workflow.types.js';
-import { Design } from '../types/design.types.js';
+import { Design, BoxTemplate } from '../types/design.types.js';
+import { SVGGenerator } from './svgGenerator.js';
+import { boxService } from './boxService.js';
 
 /**
  * Workflow Orchestrator
@@ -170,31 +172,43 @@ export class WorkflowOrchestrator {
 
   /**
    * Teknik Çizim Ajanını Çalıştırır
+   * Gerçek SVG Generator ile die-line üretir
+   * Visual design'ı SVG'ye uygular
    */
   private async executeTechnicalAgent(design: Design): Promise<any> {
-    // TODO: Gerçek ajan entegrasyonu + SVG Generator Skill
     console.log('[Technical Agent] Die-line SVG üretiliyor...');
 
-    await this.delay(3000);
+    // Kutu şablonunu al
+    const box = await boxService.getById(design.boxId);
+    if (!box) {
+      throw new Error(`Box template not found: ${design.boxId}`);
+    }
+
+    console.log(`[Technical Agent] Kutu bilgisi: ${box.name} (${box.dimensions.length}x${box.dimensions.width}x${box.dimensions.height}mm)`);
+
+    // Visual design'ı al (önceki adımdan gelmeli)
+    const visualDesign = design.visualDesign;
+    if (visualDesign) {
+      console.log(`[Technical Agent] Visual design uygulanıyor: ${visualDesign.colorPalette?.colors?.length || 0} renk, ${visualDesign.goldFoilAreas?.length || 0} foil alan`);
+    }
+
+    // SVG Generator ile gerçek die-line + visual design oluştur
+    const svgGenerator = new SVGGenerator({
+      bleed: 3,
+      includeBleedLines: true,
+      includeGlueTabs: true,
+      visualDesign: visualDesign, // AI'ın ürettiği görsel tasarımı ekle
+    });
+
+    const result = svgGenerator.generateDieLine(box);
+
+    console.log(`[Technical Agent] SVG oluşturuldu: ${result.flatDimensions.width}x${result.flatDimensions.height}mm`);
 
     return {
-      svgUrl: 'https://storage.googleapis.com/sade-chocolate.appspot.com/designs/placeholder.svg',
-      svgContent: '<svg>...</svg>', // Placeholder
-      dieLineData: {
-        cutPath: 'M0,0 L250,0 L250,200 L0,200 Z',
-        dimensions: {
-          flatWidth: 500,
-          flatHeight: 300,
-        },
-      },
-      foldLines: [
-        {
-          id: 'fold-1',
-          start: { x: 125, y: 0 },
-          end: { x: 125, y: 200 },
-          type: 'valley',
-        },
-      ],
+      svgUrl: '', // Firebase Storage URL (production'da doldurulacak)
+      svgContent: result.svg,
+      dieLineData: result.dieLineData,
+      foldLines: result.foldLines,
       bleedArea: 3,
       completedAt: new Date(),
     };

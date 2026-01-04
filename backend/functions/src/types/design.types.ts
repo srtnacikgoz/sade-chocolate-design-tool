@@ -9,10 +9,23 @@ export interface Design {
   technicalDrawing?: TechnicalDrawing;
   costReport?: CostReport;
 
+  // Custom design upload (from Canva, Illustrator, etc.)
+  customDesign?: CustomDesignUpload;
+
   status: 'draft' | 'processing' | 'completed' | 'failed';
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface CustomDesignUpload {
+  fileName: string;
+  fileUrl: string; // Firebase Storage URL
+  fileType: 'svg' | 'pdf' | 'png' | 'jpg' | 'jpeg';
+  fileSize: number; // bytes
+  uploadedAt: Date;
+  uploadedBy?: string;
+  thumbnailUrl?: string; // Preview için
 }
 
 export interface TrendAnalysis {
@@ -91,6 +104,13 @@ export interface TechnicalDrawing {
   foldLines: FoldLine[];
   bleedArea: number; // mm
   completedAt: Date;
+
+  // Two-piece box support (base + lid)
+  isTwoPiece?: boolean;
+  baseSvgContent?: string;  // Alt tepsi SVG
+  lidSvgContent?: string;   // Üst kapak SVG
+  baseDieLineData?: DieLineData;
+  lidDieLineData?: DieLineData;
 }
 
 export interface DieLineData {
@@ -142,7 +162,16 @@ export interface BoxTemplate {
     width: number;
     height: number;
   };
-  type: string;
+  type: 'gift' | 'truffle' | 'bar' | 'seasonal' | 'tray-lid' | 'sleeve' | 'display' | string;
+  structure?: 'single' | 'two-piece'; // single = tek parça, two-piece = base + lid (default: single)
   capacity: number;
   description: string;
+
+  // Two-piece specific dimensions (optional)
+  lidDimensions?: {
+    length: number;
+    width: number;
+    height: number; // Kapak yüksekliği (genelde base'den az)
+  };
+  lidType?: 'telescopic' | 'hinged' | 'sleeve' | 'magnetic';
 }

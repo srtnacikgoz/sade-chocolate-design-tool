@@ -21,21 +21,24 @@ export const Header = () => {
             <Link to="/" className="text-gray-600 hover:text-gray-800 transition-colors">
               Ana Sayfa
             </Link>
-            <Link to="/design-studio" className="text-gray-600 hover:text-gray-800 transition-colors">
-              Tasarım Stüdyosu
+            <Link to="/studio" className="text-gray-600 hover:text-gray-800 transition-colors">
+              Tasarim Studyosu
             </Link>
-            <Link to="/designs" className="text-gray-600 hover:text-gray-800 transition-colors">
-              Tasarımlarım
+            <Link to="/my-designs" className="text-gray-600 hover:text-gray-800 transition-colors">
+              Tasarimlarim
+            </Link>
+            <Link to="/3d-test" className="text-gray-600 hover:text-gray-800 transition-colors">
+              3D Test
             </Link>
           </nav>
 
           {/* Actions */}
           <div className="flex items-center gap-3">
             <Link
-              to="/design-studio"
+              to="/studio"
               className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
             >
-              Yeni Tasarım
+              Yeni Tasarim
             </Link>
           </div>
         </div>

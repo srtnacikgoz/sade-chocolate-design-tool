@@ -1,11 +1,15 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { WorkflowProgress } from '../components/design/WorkflowProgress';
+import { SVGViewer } from '../components/design/SVGViewer';
+import { Box3DPreview } from '../components/design/Box3DPreview';
+import { DesignUpload } from '../components/design/DesignUpload';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader } from '../components/ui/Card';
 import { LoadingPage } from '../components/ui/LoadingSpinner';
 import { useDesignWorkflow } from '../hooks/useDesignWorkflow';
-import { designService } from '../services/designService';
+import { designService, boxService } from '../services/designService';
+import { exportService } from '../services/exportService';
 
 export const DesignDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +21,13 @@ export const DesignDetailPage = () => {
     enabled: !!id,
   });
 
+  // Fetch box template for dimensions
+  const { data: boxTemplate } = useQuery({
+    queryKey: ['box', design?.boxId],
+    queryFn: () => boxService.getBoxById(design!.boxId),
+    enabled: !!design?.boxId,
+  });
+
   // Use workflow hook
   const {
     steps,
@@ -24,7 +35,6 @@ export const DesignDetailPage = () => {
     completedStepsCount,
     isPolling,
     startWorkflow,
-    stopPolling,
     isStartingWorkflow,
   } = useDesignWorkflow(id);
 
@@ -78,9 +88,10 @@ export const DesignDetailPage = () => {
               </Button>
             )}
             {isPolling && (
-              <Button variant="outline" onClick={stopPolling}>
-                Güncellemeyi Durdur
-              </Button>
+              <div className="flex items-center gap-2 text-sm text-blue-600">
+                <div className="animate-pulse w-2 h-2 bg-blue-600 rounded-full"></div>
+                Otomatik güncelleniyor...
+              </div>
             )}
           </div>
         </div>
@@ -141,21 +152,58 @@ export const DesignDetailPage = () => {
                 </Card>
               )}
 
-              {/* Technical Drawing */}
+              {/* Technical Drawing with SVG Viewer */}
               {design.technicalDrawing && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Teknik Cizim
+                  </h3>
+                  <SVGViewer
+                    svgContent={design.technicalDrawing.svgContent || ''}
+                    title={`Die-Line - ${design.boxId}`}
+                    downloadFileName={`sade-chocolate-${design.id}.svg`}
+                    onDownload={() => exportService.downloadSVG(design.id)}
+                  />
+                  {design.technicalDrawing.dieLineData && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Olculer:</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Duz Genislik:</span>
+                          <span className="ml-2 font-medium">{design.technicalDrawing.dieLineData.dimensions.flatWidth}mm</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Duz Yukseklik:</span>
+                          <span className="ml-2 font-medium">{design.technicalDrawing.dieLineData.dimensions.flatHeight}mm</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Tasmasi (Bleed):</span>
+                          <span className="ml-2 font-medium">{design.technicalDrawing.bleedArea}mm</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Katlama Cizgisi:</span>
+                          <span className="ml-2 font-medium">{design.technicalDrawing.foldLines?.length || 0} adet</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3D Box Preview */}
+              {boxTemplate && (
                 <Card padding="lg">
                   <CardHeader
-                    title="📐 Teknik Çizim"
-                    subtitle="Die-line ve spesifikasyonlar"
+                    title="3D Kutu Onizleme"
+                    subtitle="Bitmiş kutunun 3D görünümü"
                   />
-                  <div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      SVG die-line hazır. İndirmek için butona tıklayın.
-                    </p>
-                    <Button variant="outline">
-                      SVG İndir
-                    </Button>
-                  </div>
+                  <Box3DPreview
+                    dimensions={boxTemplate.dimensions}
+                    lidDimensions={boxTemplate.lidDimensions}
+                    isTwoPiece={boxTemplate.structure === 'two-piece' || design.technicalDrawing?.isTwoPiece}
+                    primaryColor={design.visualDesign?.colorPalette?.colors?.[0]?.hex || '#8B7355'}
+                    accentColor={design.visualDesign?.colorPalette?.colors?.[1]?.hex || '#D4AF37'}
+                  />
                 </Card>
               )}
 
@@ -176,6 +224,77 @@ export const DesignDetailPage = () => {
                   </div>
                 </Card>
               )}
+
+              {/* Custom Design Upload */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  📤 Özel Tasarım
+                </h3>
+
+                {/* Show uploaded design if exists */}
+                {design.customDesign ? (
+                  <Card padding="lg">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-gray-900">Yüklenmiş Tasarım</h4>
+                          <p className="text-sm text-gray-600">{design.customDesign.fileName}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <a
+                            href={design.customDesign.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-gray-700 hover:text-gray-900 underline"
+                          >
+                            Görüntüle
+                          </a>
+                          <a
+                            href={design.customDesign.fileUrl}
+                            download={design.customDesign.fileName}
+                            className="text-sm text-gray-700 hover:text-gray-900 underline"
+                          >
+                            İndir
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Dosya Tipi:</span>
+                          <span className="ml-2 font-medium uppercase">{design.customDesign.fileType}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Boyut:</span>
+                          <span className="ml-2 font-medium">
+                            {(design.customDesign.fileSize / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Yüklenme:</span>
+                          <span className="ml-2 font-medium">
+                            {new Date(design.customDesign.uploadedAt).toLocaleDateString('tr-TR')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Show preview for images */}
+                      {['png', 'jpg', 'jpeg', 'svg'].includes(design.customDesign.fileType) && (
+                        <div className="mt-4">
+                          <img
+                            src={design.customDesign.fileUrl}
+                            alt={design.customDesign.fileName}
+                            className="max-w-full h-auto border border-gray-200 rounded-lg"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ) : (
+                  // Show upload component if no design uploaded yet
+                  <DesignUpload designId={design.id} />
+                )}
+              </div>
             </div>
           </div>
 

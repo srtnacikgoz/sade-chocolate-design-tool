@@ -21,12 +21,72 @@ interface BoxDimensionPickerProps {
   selectedId?: string;
 }
 
+// Fallback templates when backend is not available
+const FALLBACK_TEMPLATES: BoxTemplate[] = [
+  {
+    id: 'gift-9',
+    name: '9\'lu Pralin Kutusu',
+    dimensions: { length: 120, width: 120, height: 40 },
+    type: 'gift',
+    capacity: 9,
+    description: 'Kompakt hediye kutusu, 3x3 pralin dizilimi',
+  },
+  {
+    id: 'gift-16',
+    name: '16\'lı Premium Kutu',
+    dimensions: { length: 160, width: 160, height: 45 },
+    type: 'gift',
+    capacity: 16,
+    description: 'Orta boy premium kutu, 4x4 pralin dizilimi',
+  },
+  {
+    id: 'gift-25',
+    name: '25\'li Hediye Kutusu',
+    dimensions: { length: 200, width: 200, height: 50 },
+    type: 'gift',
+    capacity: 25,
+    description: 'Büyük hediye kutusu, 5x5 pralin dizilimi',
+  },
+  {
+    id: 'truffle-4',
+    name: '4\'lü Truffle Kutusu',
+    dimensions: { length: 80, width: 80, height: 35 },
+    type: 'truffle',
+    capacity: 4,
+    description: 'Mini truffle kutusu, 2x2 dizilim',
+  },
+  {
+    id: 'bar-single',
+    name: 'Tablet Çikolata',
+    dimensions: { length: 180, width: 80, height: 15 },
+    type: 'bar',
+    capacity: 1,
+    description: 'Tek tablet çikolata ambalajı',
+  },
+  {
+    id: 'seasonal-heart',
+    name: 'Sevgililer Günü Kalp',
+    dimensions: { length: 150, width: 150, height: 40 },
+    type: 'seasonal',
+    capacity: 12,
+    description: 'Kalp şeklinde özel kutu',
+  },
+];
+
 export const BoxDimensionPicker = ({
   templates,
   onSelect,
   selectedId
 }: BoxDimensionPickerProps) => {
   const [activeType, setActiveType] = useState<string>('all');
+  const [customDimensions, setCustomDimensions] = useState({
+    length: 150,
+    width: 150,
+    height: 45,
+  });
+
+  // Use fallback templates if none provided
+  const effectiveTemplates = templates.length > 0 ? templates : FALLBACK_TEMPLATES;
 
   const types = [
     { id: 'all', label: 'Tümü' },
@@ -37,8 +97,20 @@ export const BoxDimensionPicker = ({
   ];
 
   const filteredTemplates = activeType === 'all'
-    ? templates
-    : templates.filter(t => t.type === activeType);
+    ? effectiveTemplates
+    : effectiveTemplates.filter(t => t.type === activeType);
+
+  const handleCustomSelect = () => {
+    const customTemplate: BoxTemplate = {
+      id: `custom-${Date.now()}`,
+      name: 'Özel Boyut',
+      dimensions: customDimensions,
+      type: 'custom',
+      capacity: Math.floor((customDimensions.length * customDimensions.width) / 1600), // Approximate
+      description: `${customDimensions.length} × ${customDimensions.width} × ${customDimensions.height} mm özel kutu`,
+    };
+    onSelect(customTemplate);
+  };
 
   return (
     <Card>
@@ -112,7 +184,13 @@ export const BoxDimensionPicker = ({
             <label className="block text-sm text-gray-600 mb-1">Uzunluk (mm)</label>
             <input
               type="number"
-              placeholder="250"
+              min="50"
+              max="500"
+              value={customDimensions.length}
+              onChange={(e) => setCustomDimensions(prev => ({
+                ...prev,
+                length: parseInt(e.target.value) || 50
+              }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
             />
           </div>
@@ -120,7 +198,13 @@ export const BoxDimensionPicker = ({
             <label className="block text-sm text-gray-600 mb-1">Genişlik (mm)</label>
             <input
               type="number"
-              placeholder="200"
+              min="50"
+              max="500"
+              value={customDimensions.width}
+              onChange={(e) => setCustomDimensions(prev => ({
+                ...prev,
+                width: parseInt(e.target.value) || 50
+              }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
             />
           </div>
@@ -128,12 +212,21 @@ export const BoxDimensionPicker = ({
             <label className="block text-sm text-gray-600 mb-1">Yükseklik (mm)</label>
             <input
               type="number"
-              placeholder="50"
+              min="10"
+              max="200"
+              value={customDimensions.height}
+              onChange={(e) => setCustomDimensions(prev => ({
+                ...prev,
+                height: parseInt(e.target.value) || 10
+              }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
             />
           </div>
         </div>
-        <Button variant="outline" className="mt-3 w-full">
+        <p className="text-xs text-gray-500 mt-2">
+          Önizleme: {customDimensions.length} × {customDimensions.width} × {customDimensions.height} mm
+        </p>
+        <Button variant="outline" className="mt-3 w-full" onClick={handleCustomSelect}>
           Özel Boyut Kullan
         </Button>
       </div>

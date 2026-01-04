@@ -5,7 +5,7 @@ import app from './api/app.js';
 // Export the Express app as a Cloud Function
 export const api = onRequest(
   {
-    region: 'us-central1',
+    region: 'europe-west3',
     maxInstances: 10,
     timeoutSeconds: 60,
     memory: '512MiB'

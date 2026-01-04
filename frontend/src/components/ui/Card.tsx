@@ -1,17 +1,19 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, MouseEventHandler } from 'react';
 
 interface CardProps {
   children: ReactNode;
   className?: string;
   padding?: 'none' | 'sm' | 'md' | 'lg';
   shadow?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  onClick?: MouseEventHandler<HTMLDivElement>;
 }
 
 export const Card = ({
   children,
   className = '',
   padding = 'md',
-  shadow = 'md'
+  shadow = 'md',
+  onClick
 }: CardProps) => {
   const paddingStyles = {
     none: '',
@@ -29,7 +31,12 @@ export const Card = ({
   };
 
   return (
-    <div className={`bg-white rounded-xl ${paddingStyles[padding]} ${shadowStyles[shadow]} ${className}`}>
+    <div
+      className={`bg-white rounded-xl ${paddingStyles[padding]} ${shadowStyles[shadow]} ${className}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       {children}
     </div>
   );

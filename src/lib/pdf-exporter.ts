@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
 
-export async function exportToPdf(svgElement: SVGSVGElement, filename: string) {
+export async function exportToPdf(svgElement: SVGSVGElement, filename: string, snapshotUrl?: string) {
     // Create a new PDF document
     // Orientation: portrait, Unit: mm, Format: a4
     const doc = new jsPDF({
@@ -32,6 +32,16 @@ export async function exportToPdf(svgElement: SVGSVGElement, filename: string) {
         width: width,
         height: height,
     });
+
+    // Add 3D Snapshot if available
+    if (snapshotUrl) {
+        doc.addPage();
+        doc.setFont('times', 'bold');
+        doc.setFontSize(16);
+        doc.text('3D Visualization', 20, 20);
+
+        doc.addImage(snapshotUrl, 'PNG', 20, 40, 170, 120); // A4 width is 210mm, so 170mm fits well
+    }
 
     // Save the PDF
     doc.save(filename);
