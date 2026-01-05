@@ -1,0 +1,15 @@
+{
+  "name": "sade-chocolate-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node dev-server.js",
+    "build": "cd functions && npm run build",
+    "deploy": "cd functions && npm run deploy"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "multer": "^2.0.0"
+  }
+}

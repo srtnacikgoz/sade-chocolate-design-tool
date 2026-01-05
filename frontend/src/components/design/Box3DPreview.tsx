@@ -74,185 +74,150 @@ const SCALE = 0.01;
 type ViewMode = 'assembled' | 'exploded' | 'folding' | 'flat';
 
 // ============================================================
-// ECMA A20.20.03.01 - Realistic Folding Box with Tuck Flaps
+// ECMA A20.20.03.01 - Realistic Folding Box
+// Basitleştirilmiş ve Doğru Çalışan Versiyon
 // ============================================================
 //
-// Die-line layout (ECMA Standard):
+// Die-line layout:
+//           [Back Panel]
+//    [Left] [  Bottom  ] [Right]
+//           [Front Panel]
 //
-//                 [Tuck Flap Top]
-//                 [Dust Flap Top]
-//    [Glue Tab] [B1] [A1 Bottom] [B2] [A2 Back]
-//                 [Dust Flap Bot]
-//                 [Tuck Flap Bot]
+// + Her panelde üst/alt dust flap'ler
+// + Üst kapak (tuck flap) öne kapanır
 //
-// Katlama Sirasi:
-// Faz 1 (0-25%):   Yan paneller (B1, B2) yukari
-// Faz 2 (25-50%):  Arka panel (A2) + glue tab
-// Faz 3 (50-65%):  Dust flap'ler iceri
-// Faz 4 (65-80%):  Alt tuck flap (one kapanir)
-// Faz 5 (80-100%): Ust tuck flap (arkaya kapanir - REVERSE)
-//
-
-// Katlama fazlarina gore aci hesapla
-function calculatePhaseAngle(
-  globalProgress: number,
-  startProgress: number,
-  endProgress: number,
-  maxAngle: number
-): number {
-  if (globalProgress < startProgress) return 0;
-  if (globalProgress >= endProgress) return maxAngle;
-
-  const localProgress = (globalProgress - startProgress) / (endProgress - startProgress);
-  // Easing (easeInOutQuad)
-  const eased = localProgress < 0.5
-    ? 2 * localProgress * localProgress
-    : 1 - Math.pow(-2 * localProgress + 2, 2) / 2;
-
-  return maxAngle * eased;
-}
 
 function FoldingBox({
   dimensions,
   color,
   foldProgress, // 0 = completely flat die-line, 1 = fully assembled box
   lidGraphic,
+  showFoldLines = true,
 }: {
   dimensions: BoxDimensions;
   color: string;
   foldProgress: number;
   lidGraphic?: UploadedGraphic;
+  showFoldLines?: boolean;
 }) {
   const texture = useDataUrlTexture(lidGraphic?.dataUrl);
   const { length, width, height } = dimensions;
   const s = SCALE;
-  const thickness = 0.003;
+  const t = 0.003; // thickness
 
-  // Panel boyutlari (ECMA standart)
-  const dustFlapHeight = width * 0.45;  // Dust flap yuksekligi
-  const tuckFlapHeight = width * 0.6;   // Tuck flap yuksekligi (kapak dili)
-  const glueFlapWidth = Math.min(15, Math.max(7, height * 0.15)); // Tutkal payi
+  // Eased fold progress
+  const eased = foldProgress < 0.5
+    ? 2 * foldProgress * foldProgress
+    : 1 - Math.pow(-2 * foldProgress + 2, 2) / 2;
 
-  // ===== FAZ BAZLI KATLAMA ACILARI =====
-  // Faz 1: Yan paneller (0-25%)
-  const sideFoldAngle = calculatePhaseAngle(foldProgress, 0, 0.25, Math.PI / 2);
+  // Ana katlama açısı (0 -> 90 derece)
+  const mainAngle = (Math.PI / 2) * eased;
 
-  // Faz 2: Arka panel + glue tab (25-50%)
-  const backFoldAngle = calculatePhaseAngle(foldProgress, 0.25, 0.50, Math.PI / 2);
+  // Dust flap ve tuck flap boyutları
+  const dustH = Math.min(height * 0.4, width * 0.35); // Dust flap height
+  const tuckH = Math.min(height * 0.6, width * 0.5);  // Tuck flap height
 
-  // Faz 3: Dust flaps (50-65%)
-  const dustFoldAngle = calculatePhaseAngle(foldProgress, 0.50, 0.65, Math.PI / 2);
+  // Dust ve tuck flap'ler daha geç katlanmaya başlar
+  const dustProgress = Math.max(0, (foldProgress - 0.3) / 0.4);
+  const dustAngle = (Math.PI / 2) * Math.min(1, dustProgress);
 
-  // Faz 4: Alt tuck flap - one kapanir (65-80%)
-  const bottomTuckAngle = calculatePhaseAngle(foldProgress, 0.65, 0.80, Math.PI * 0.9);
+  const tuckProgress = Math.max(0, (foldProgress - 0.6) / 0.4);
+  const tuckAngle = (Math.PI / 2) * Math.min(1, tuckProgress);
 
-  // Faz 5: Ust tuck flap - arkaya kapanir REVERSE (80-100%)
-  const topTuckAngle = calculatePhaseAngle(foldProgress, 0.80, 1.0, -Math.PI * 0.9);
-
-  // Ikincil renk (flap'ler icin biraz daha koyu)
-  const flapColor = color;
+  // Renk varyasyonları
+  const mainColor = color;
   const dustColor = color;
+  const tuckColor = color;
+
+  // Fold line çizgileri - toggle ile göster/gizle
+  const FoldLine = ({ start, end, color = '#ff0000' }: { start: [number, number, number], end: [number, number, number], color?: string }) => {
+    if (!showFoldLines) return null;
+
+    return (
+      <line>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={new Float32Array([...start, ...end])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color={color} linewidth={3} opacity={0.8} transparent />
+      </line>
+    );
+  };
 
   return (
     <group>
-      {/* ===== A1 - BOTTOM PANEL (TABAN - Sabit) ===== */}
-      <mesh position={[0, thickness / 2, 0]}>
-        <boxGeometry args={[length * s, thickness, width * s]} />
+      {/* ===== BOTTOM PANEL (A1 - Taban, Sabit) ===== */}
+      <mesh position={[0, t / 2, 0]}>
+        <boxGeometry args={[length * s, t, width * s]} />
         {texture ? (
           <meshStandardMaterial map={texture} color="#ffffff" />
         ) : (
-          <meshStandardMaterial color={color} />
+          <meshStandardMaterial color={mainColor} />
         )}
       </mesh>
 
       {/* Texture overlay */}
       {texture && (
-        <mesh position={[0, thickness + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0, t + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[
             length * s * (lidGraphic?.scale || 100) / 100,
             width * s * (lidGraphic?.scale || 100) / 100
           ]} />
-          <meshBasicMaterial map={texture} transparent={true} />
+          <meshBasicMaterial map={texture} transparent />
         </mesh>
       )}
 
-      {/* ===== FRONT ASSEMBLY (On Taraf) ===== */}
-      {/* Front Panel - Faz 1'de katlanir */}
+      {/* ===== FRONT PANEL ===== */}
+      {/* Pivot: Tabanın ön kenarı (z = +width/2) */}
       <group position={[0, 0, (width * s) / 2]}>
-        <group rotation={[-sideFoldAngle, 0, 0]}>
-          {/* Front Main Panel */}
-          <mesh position={[0, thickness / 2, (height * s) / 2]}>
-            <boxGeometry args={[length * s, thickness, height * s]} />
-            <meshStandardMaterial color={color} />
+        <group rotation={[-mainAngle, 0, 0]}>
+          {/* Front panel kendisi */}
+          <mesh position={[0, t / 2, (height * s) / 2]}>
+            <boxGeometry args={[length * s, t, height * s]} />
+            <meshStandardMaterial color={mainColor} />
           </mesh>
 
-          {/* Front Top Dust Flap - Front panel'in ustunden iceri katlanir */}
-          <group position={[0, thickness, (height * s)]}>
-            <group rotation={[-dustFoldAngle, 0, 0]}>
-              <mesh position={[0, thickness / 2, (dustFlapHeight * s) / 2]}>
-                <boxGeometry args={[length * s, thickness, dustFlapHeight * s]} />
+          {/* Front üst dust flap - panel üst kenarından içeri */}
+          <group position={[0, 0, height * s]}>
+            <group rotation={[-dustAngle, 0, 0]}>
+              <mesh position={[0, t / 2, (dustH * s) / 2]}>
+                <boxGeometry args={[(length - 2) * s, t, dustH * s]} />
                 <meshStandardMaterial color={dustColor} />
               </mesh>
 
-              {/* Front Top Tuck Flap - Dust flap'in ustunden iceri (one dogru) */}
-              <group position={[0, thickness, (dustFlapHeight * s)]}>
-                <group rotation={[-bottomTuckAngle, 0, 0]}>
-                  <mesh position={[0, thickness / 2, (tuckFlapHeight * s) / 2]}>
-                    <boxGeometry args={[(length - 4) * s, thickness, tuckFlapHeight * s]} />
-                    <meshStandardMaterial color={flapColor} />
+              {/* Front tuck flap - dust'ın üstünden içeri (kapak) */}
+              <group position={[0, 0, dustH * s]}>
+                <group rotation={[-tuckAngle, 0, 0]}>
+                  <mesh position={[0, t / 2, (tuckH * s) / 2]}>
+                    <boxGeometry args={[(length - 6) * s, t, tuckH * s]} />
+                    <meshStandardMaterial color={tuckColor} />
                   </mesh>
                 </group>
               </group>
             </group>
           </group>
-
-          {/* Front Bottom Dust Flap */}
-          <group position={[0, thickness, 0]}>
-            <group rotation={[dustFoldAngle, 0, 0]}>
-              <mesh position={[0, thickness / 2, -(dustFlapHeight * s) / 2]}>
-                <boxGeometry args={[length * s, thickness, dustFlapHeight * s]} />
-                <meshStandardMaterial color={dustColor} />
-              </mesh>
-            </group>
-          </group>
         </group>
       </group>
 
-      {/* ===== BACK ASSEMBLY (Arka Taraf) ===== */}
-      {/* Back Panel - Faz 1'de katlanir */}
+      {/* ===== BACK PANEL ===== */}
+      {/* Pivot: Tabanın arka kenarı (z = -width/2) */}
       <group position={[0, 0, -(width * s) / 2]}>
-        <group rotation={[sideFoldAngle, 0, 0]}>
-          {/* Back Main Panel */}
-          <mesh position={[0, thickness / 2, -(height * s) / 2]}>
-            <boxGeometry args={[length * s, thickness, height * s]} />
-            <meshStandardMaterial color={color} />
+        <group rotation={[mainAngle, 0, 0]}>
+          {/* Back panel kendisi */}
+          <mesh position={[0, t / 2, -(height * s) / 2]}>
+            <boxGeometry args={[length * s, t, height * s]} />
+            <meshStandardMaterial color={mainColor} />
           </mesh>
 
-          {/* Back Top Dust Flap */}
-          <group position={[0, thickness, -(height * s)]}>
-            <group rotation={[dustFoldAngle, 0, 0]}>
-              <mesh position={[0, thickness / 2, -(dustFlapHeight * s) / 2]}>
-                <boxGeometry args={[length * s, thickness, dustFlapHeight * s]} />
-                <meshStandardMaterial color={dustColor} />
-              </mesh>
-
-              {/* Back Top Tuck Flap - REVERSE (arkaya dogru kapanir) */}
-              <group position={[0, thickness, -(dustFlapHeight * s)]}>
-                <group rotation={[-topTuckAngle, 0, 0]}>
-                  <mesh position={[0, thickness / 2, -(tuckFlapHeight * s) / 2]}>
-                    <boxGeometry args={[(length - 4) * s, thickness, tuckFlapHeight * s]} />
-                    <meshStandardMaterial color={flapColor} />
-                  </mesh>
-                </group>
-              </group>
-            </group>
-          </group>
-
-          {/* Back Bottom Dust Flap */}
-          <group position={[0, thickness, 0]}>
-            <group rotation={[-dustFoldAngle, 0, 0]}>
-              <mesh position={[0, thickness / 2, (dustFlapHeight * s) / 2]}>
-                <boxGeometry args={[length * s, thickness, dustFlapHeight * s]} />
+          {/* Back üst dust flap */}
+          <group position={[0, 0, -height * s]}>
+            <group rotation={[dustAngle, 0, 0]}>
+              <mesh position={[0, t / 2, -(dustH * s) / 2]}>
+                <boxGeometry args={[(length - 2) * s, t, dustH * s]} />
                 <meshStandardMaterial color={dustColor} />
               </mesh>
             </group>
@@ -260,117 +225,114 @@ function FoldingBox({
         </group>
       </group>
 
-      {/* ===== LEFT SIDE (B1 - Sol Yan) ===== */}
+      {/* ===== LEFT PANEL ===== */}
+      {/* Pivot: Tabanın sol kenarı (x = -length/2) */}
       <group position={[-(length * s) / 2, 0, 0]}>
-        <group rotation={[0, 0, -sideFoldAngle]}>
-          {/* B1 Main Panel */}
-          <mesh position={[-(height * s) / 2, thickness / 2, 0]}>
-            <boxGeometry args={[height * s, thickness, width * s]} />
-            <meshStandardMaterial color={color} />
+        <group rotation={[0, 0, -mainAngle]}>
+          {/* Left panel kendisi */}
+          <mesh position={[-(height * s) / 2, t / 2, 0]}>
+            <boxGeometry args={[height * s, t, width * s]} />
+            <meshStandardMaterial color={mainColor} />
           </mesh>
 
-          {/* B1 Top Dust Flap */}
-          <group position={[-(height * s), thickness, (width * s) / 2]}>
-            <group rotation={[-dustFoldAngle, 0, 0]}>
-              <mesh position={[0, 0, (dustFlapHeight * s) / 2]} rotation={[0, 0, Math.PI / 2]}>
-                <boxGeometry args={[dustFlapHeight * s, thickness, height * s]} />
+          {/* Left üst dust flap (z+ tarafı) */}
+          <group position={[-(height * s) / 2, 0, (width * s) / 2]}>
+            <group rotation={[-dustAngle, 0, 0]}>
+              <mesh position={[0, t / 2, (dustH * s) / 2]}>
+                <boxGeometry args={[(height - 2) * s, t, dustH * s]} />
                 <meshStandardMaterial color={dustColor} />
               </mesh>
             </group>
           </group>
 
-          {/* B1 Bottom Dust Flap */}
-          <group position={[-(height * s), thickness, -(width * s) / 2]}>
-            <group rotation={[dustFoldAngle, 0, 0]}>
-              <mesh position={[0, 0, -(dustFlapHeight * s) / 2]} rotation={[0, 0, Math.PI / 2]}>
-                <boxGeometry args={[dustFlapHeight * s, thickness, height * s]} />
+          {/* Left alt dust flap (z- tarafı) */}
+          <group position={[-(height * s) / 2, 0, -(width * s) / 2]}>
+            <group rotation={[dustAngle, 0, 0]}>
+              <mesh position={[0, t / 2, -(dustH * s) / 2]}>
+                <boxGeometry args={[(height - 2) * s, t, dustH * s]} />
                 <meshStandardMaterial color={dustColor} />
-              </mesh>
-            </group>
-          </group>
-
-          {/* GLUE TAB - B1'in sol kenarinda */}
-          <group position={[-(height * s), 0, 0]}>
-            <group rotation={[0, 0, -backFoldAngle]}>
-              <mesh position={[-(glueFlapWidth * s) / 2, thickness / 2, 0]}>
-                <boxGeometry args={[glueFlapWidth * s, thickness, (width - 10) * s]} />
-                <meshStandardMaterial color={flapColor} transparent opacity={0.8} />
               </mesh>
             </group>
           </group>
         </group>
       </group>
 
-      {/* ===== RIGHT SIDE (B2 - Sag Yan) ===== */}
+      {/* ===== RIGHT PANEL ===== */}
+      {/* Pivot: Tabanın sağ kenarı (x = +length/2) */}
       <group position={[(length * s) / 2, 0, 0]}>
-        <group rotation={[0, 0, sideFoldAngle]}>
-          {/* B2 Main Panel */}
-          <mesh position={[(height * s) / 2, thickness / 2, 0]}>
-            <boxGeometry args={[height * s, thickness, width * s]} />
-            <meshStandardMaterial color={color} />
+        <group rotation={[0, 0, mainAngle]}>
+          {/* Right panel kendisi */}
+          <mesh position={[(height * s) / 2, t / 2, 0]}>
+            <boxGeometry args={[height * s, t, width * s]} />
+            <meshStandardMaterial color={mainColor} />
           </mesh>
 
-          {/* B2 Top Dust Flap */}
-          <group position={[(height * s), thickness, (width * s) / 2]}>
-            <group rotation={[-dustFoldAngle, 0, 0]}>
-              <mesh position={[0, 0, (dustFlapHeight * s) / 2]} rotation={[0, 0, -Math.PI / 2]}>
-                <boxGeometry args={[dustFlapHeight * s, thickness, height * s]} />
+          {/* Right üst dust flap (z+ tarafı) */}
+          <group position={[(height * s) / 2, 0, (width * s) / 2]}>
+            <group rotation={[-dustAngle, 0, 0]}>
+              <mesh position={[0, t / 2, (dustH * s) / 2]}>
+                <boxGeometry args={[(height - 2) * s, t, dustH * s]} />
                 <meshStandardMaterial color={dustColor} />
               </mesh>
             </group>
           </group>
 
-          {/* B2 Bottom Dust Flap */}
-          <group position={[(height * s), thickness, -(width * s) / 2]}>
-            <group rotation={[dustFoldAngle, 0, 0]}>
-              <mesh position={[0, 0, -(dustFlapHeight * s) / 2]} rotation={[0, 0, -Math.PI / 2]}>
-                <boxGeometry args={[dustFlapHeight * s, thickness, height * s]} />
+          {/* Right alt dust flap (z- tarafı) */}
+          <group position={[(height * s) / 2, 0, -(width * s) / 2]}>
+            <group rotation={[dustAngle, 0, 0]}>
+              <mesh position={[0, t / 2, -(dustH * s) / 2]}>
+                <boxGeometry args={[(height - 2) * s, t, dustH * s]} />
                 <meshStandardMaterial color={dustColor} />
               </mesh>
-            </group>
-          </group>
-
-          {/* A2 - BACK PANEL (Arka Panel - B2'ye bagli) */}
-          <group position={[(height * s), 0, 0]}>
-            <group rotation={[0, 0, backFoldAngle]}>
-              <mesh position={[(length * s) / 2, thickness / 2, 0]}>
-                <boxGeometry args={[length * s, thickness, width * s]} />
-                <meshStandardMaterial color={color} />
-              </mesh>
-
-              {/* A2 Top Dust + Tuck (REVERSE) */}
-              <group position={[(length * s), thickness, (width * s) / 2]}>
-                <group rotation={[-dustFoldAngle, 0, 0]}>
-                  <mesh position={[0, 0, (dustFlapHeight * s) / 2]} rotation={[0, 0, -Math.PI / 2]}>
-                    <boxGeometry args={[dustFlapHeight * s, thickness, length * s]} />
-                    <meshStandardMaterial color={dustColor} />
-                  </mesh>
-
-                  {/* A2 Tuck - REVERSE (arkaya) */}
-                  <group position={[0, thickness, (dustFlapHeight * s)]}>
-                    <group rotation={[topTuckAngle, 0, 0]}>
-                      <mesh position={[0, 0, (tuckFlapHeight * s) / 2]} rotation={[0, 0, -Math.PI / 2]}>
-                        <boxGeometry args={[tuckFlapHeight * s, thickness, (length - 4) * s]} />
-                        <meshStandardMaterial color={flapColor} />
-                      </mesh>
-                    </group>
-                  </group>
-                </group>
-              </group>
-
-              {/* A2 Bottom Dust */}
-              <group position={[(length * s), thickness, -(width * s) / 2]}>
-                <group rotation={[dustFoldAngle, 0, 0]}>
-                  <mesh position={[0, 0, -(dustFlapHeight * s) / 2]} rotation={[0, 0, -Math.PI / 2]}>
-                    <boxGeometry args={[dustFlapHeight * s, thickness, length * s]} />
-                    <meshStandardMaterial color={dustColor} />
-                  </mesh>
-                </group>
-              </group>
             </group>
           </group>
         </group>
       </group>
+
+      {/* ===== FOLD LINES (Katlama Çizgileri) ===== */}
+      {showFoldLines && (
+        <>
+          {/* Front panel fold line (kırmızı - mountain fold) */}
+          <FoldLine
+            start={[-(length * s) / 2, t, (width * s) / 2]}
+            end={[(length * s) / 2, t, (width * s) / 2]}
+            color="#ff0000"
+          />
+
+          {/* Back panel fold line (kırmızı - mountain fold) */}
+          <FoldLine
+            start={[-(length * s) / 2, t, -(width * s) / 2]}
+            end={[(length * s) / 2, t, -(width * s) / 2]}
+            color="#ff0000"
+          />
+
+          {/* Left panel fold line (kırmızı - mountain fold) */}
+          <FoldLine
+            start={[-(length * s) / 2, t, -(width * s) / 2]}
+            end={[-(length * s) / 2, t, (width * s) / 2]}
+            color="#ff0000"
+          />
+
+          {/* Right panel fold line (kırmızı - mountain fold) */}
+          <FoldLine
+            start={[(length * s) / 2, t, -(width * s) / 2]}
+            end={[(length * s) / 2, t, (width * s) / 2]}
+            color="#ff0000"
+          />
+
+          {/* Dust flap fold lines (mavi - valley fold) */}
+          <FoldLine
+            start={[-(length * s) / 2, t, (width * s) / 2 + height * s]}
+            end={[(length * s) / 2, t, (width * s) / 2 + height * s]}
+            color="#0066ff"
+          />
+          <FoldLine
+            start={[-(length * s) / 2, t, -(width * s) / 2 - height * s]}
+            end={[(length * s) / 2, t, -(width * s) / 2 - height * s]}
+            color="#0066ff"
+          />
+        </>
+      )}
     </group>
   );
 }
@@ -581,6 +543,7 @@ function SingleBox({
   foldProgress,
   wireframe,
   lidGraphic,
+  showFoldLines,
 }: {
   dimensions: BoxDimensions;
   color: string;
@@ -588,6 +551,7 @@ function SingleBox({
   foldProgress: number;
   wireframe: boolean;
   lidGraphic?: UploadedGraphic;
+  showFoldLines?: boolean;
 }) {
   const texture = useDataUrlTexture(lidGraphic?.dataUrl);
   const { length, width, height } = dimensions;
@@ -604,6 +568,7 @@ function SingleBox({
         color={color}
         foldProgress={viewMode === 'flat' ? 0 : foldProgress}
         lidGraphic={lidGraphic}
+        showFoldLines={showFoldLines}
       />
     );
   }
@@ -785,6 +750,7 @@ export function Box3DPreview({
   const [wireframe, setWireframe] = useState(false);
   const [foldProgress, setFoldProgress] = useState(1);
   const [isAnimatingFold, setIsAnimatingFold] = useState(false);
+  const [showFoldLines, setShowFoldLines] = useState(true);
 
   // Default lid dimensions if not provided
   const effectiveLidDims = lidDimensions || {
@@ -883,6 +849,15 @@ export function Box3DPreview({
         >
           {wireframe ? '◼ Dolgulu' : '▤ Tel Kafes'}
         </ControlButton>
+        {!isTwoPiece && (viewMode === 'folding' || viewMode === 'flat') && (
+          <ControlButton
+            active={showFoldLines}
+            onClick={() => setShowFoldLines(!showFoldLines)}
+            title="Katlama çizgilerini göster/gizle"
+          >
+            {showFoldLines ? '📏 Çizgiler Açık' : '📐 Çizgiler Kapalı'}
+          </ControlButton>
+        )}
         <ControlButton onClick={handleScreenshot} title="Ekran görüntüsü al">
           📷 Kaydet
         </ControlButton>
@@ -974,6 +949,7 @@ export function Box3DPreview({
                   foldProgress={foldProgress}
                   wireframe={wireframe}
                   lidGraphic={lidGraphic}
+                  showFoldLines={showFoldLines}
                 />
               )}
 

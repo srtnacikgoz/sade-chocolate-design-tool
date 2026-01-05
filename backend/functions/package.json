@@ -9,6 +9,8 @@
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
+    "dev": "npm run build && node lib/dev-server.js",
+    "dev:watch": "tsc -w & nodemon lib/dev-server.js",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
