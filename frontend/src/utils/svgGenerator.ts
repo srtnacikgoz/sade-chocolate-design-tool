@@ -10,6 +10,12 @@
  */
 
 import { SVG_LAYERS, BLEED_STANDARDS, calculateCreasingChannel } from './printSpecifications';
+import {
+  calculateGlueFlapWidth,
+  calculateTuckFlapHeight,
+  calculateDustFlapHeight,
+} from './ecmaPanelCalculator';
+import { DEFAULT_ECMA_TOLERANCES, PANEL_CALC_CONSTANTS } from '../types/ecma-box.types';
 
 interface BoxDimensions {
   length: number;
@@ -629,7 +635,7 @@ export function exportBoxSVG(
  */
 export function getBoxSVGContent(
   dims: BoxDimensions,
-  options: SVGGeneratorOptions & { part?: 'single' | 'base' | 'lid' } = {}
+  options: SVGGeneratorOptions & { part?: 'single' | 'base' | 'lid' | 'ecma-a20' } = {}
 ): GeneratedSVG {
   const { part = 'single' } = options;
 
@@ -637,6 +643,340 @@ export function getBoxSVGContent(
     return generateTrayBase(dims, options);
   } else if (part === 'lid') {
     return generateTrayLid(dims, options);
+  } else if (part === 'ecma-a20') {
+    return generateECMAA20DieLine(dims, options);
   }
   return generateSinglePieceBox(dims, options);
+}
+
+// ============================================================
+// ECMA A20.20.03.01 DIE-LINE GENERATOR
+// ============================================================
+
+
+/**
+ * Tuck flap icin ozel path (ucgen kilitli)
+ * Kilit centigi ile birlikte
+ */
+function generateTuckFlapPath(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  hasLockNotch: boolean = true
+): string {
+  const notchWidth = PANEL_CALC_CONSTANTS.LOCK_NOTCH_WIDTH;
+  const notchDepth = PANEL_CALC_CONSTANTS.LOCK_NOTCH_DEPTH;
+
+  // Kilit centigi merkezi
+  const centerX = x + width / 2;
+
+  if (hasLockNotch) {
+    // Kilit centikli tuck flap
+    return `
+      M ${x} ${y + height}
+      L ${x} ${y}
+      L ${centerX - notchWidth / 2} ${y}
+      L ${centerX - notchWidth / 2} ${y + notchDepth}
+      L ${centerX + notchWidth / 2} ${y + notchDepth}
+      L ${centerX + notchWidth / 2} ${y}
+      L ${x + width} ${y}
+      L ${x + width} ${y + height}
+      Z
+    `.trim().replace(/\s+/g, ' ');
+  }
+
+  // Basit dikdortgen
+  return `M ${x} ${y} L ${x + width} ${y} L ${x + width} ${y + height} L ${x} ${y + height} Z`;
+}
+
+/**
+ * Dust flap icin path (trapez seklinde)
+ */
+function generateDustFlapPath(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  isTop: boolean = true
+): string {
+  const inset = height * 0.3; // Ic taraf daraltma
+
+  if (isTop) {
+    // Ust dust flap - ustten daralan
+    return `
+      M ${x} ${y + height}
+      L ${x + inset} ${y}
+      L ${x + width - inset} ${y}
+      L ${x + width} ${y + height}
+      Z
+    `.trim().replace(/\s+/g, ' ');
+  }
+
+  // Alt dust flap - alttan daralan
+  return `
+    M ${x} ${y}
+    L ${x + width} ${y}
+    L ${x + width - inset} ${y + height}
+    L ${x + inset} ${y + height}
+    Z
+  `.trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * Glue tab icin path (egimli kenarli)
+ */
+function generateGlueTabPath(
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): string {
+  const taper = width * 0.3; // Daralma miktari
+
+  return `
+    M ${x + width} ${y}
+    L ${x + width} ${y + height}
+    L ${x + taper} ${y + height}
+    L ${x} ${y + height * 0.8}
+    L ${x} ${y + height * 0.2}
+    L ${x + taper} ${y}
+    Z
+  `.trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * ECMA A20.20.03.01 Reverse Tuck End Box - Tam Die-Line
+ *
+ * Layout:
+ * [Glue Tab] [B1] [A1] [B2] [A2]
+ *
+ * Her ana panel icin (A1, A2):
+ * - Ust: Dust Flap + Tuck Flap
+ * - Alt: Dust Flap + Tuck Flap
+ */
+export function generateECMAA20DieLine(
+  dims: BoxDimensions,
+  options: SVGGeneratorOptions = {}
+): GeneratedSVG {
+  const { length, width, height } = dims;
+  const bleed = options.bleed ?? DEFAULT_BLEED;
+  const boardThickness = options.boardThickness ?? DEFAULT_BOARD_THICKNESS;
+  const resolution = options.resolution ?? 'print';
+  const creaseChannel = calculateCreasingChannel(boardThickness);
+  const tolerances = DEFAULT_ECMA_TOLERANCES;
+
+  // Panel boyutlarini hesapla
+  const glueFlapWidth = calculateGlueFlapWidth(height);
+  const tuckFlapHeight = calculateTuckFlapHeight(width);
+  const dustFlapHeight = calculateDustFlapHeight(width);
+  const mainPanelHeight = height + tolerances.panelTolerance;
+  const sidePanelHeight = height;
+
+  // Toplam duz boyutlar
+  const flatWidth = glueFlapWidth + width + length + width + length + (bleed * 2);
+  const flatHeight = (tuckFlapHeight * 2) + (dustFlapHeight * 2) + mainPanelHeight + (bleed * 2);
+
+  // Baslangic pozisyonlari
+  let currentX = bleed;
+  const topTuckY = bleed;
+  const topDustY = bleed + tuckFlapHeight;
+  const mainPanelY = bleed + tuckFlapHeight + dustFlapHeight;
+  const bottomDustY = mainPanelY + mainPanelHeight;
+  const bottomTuckY = bottomDustY + dustFlapHeight;
+
+  // ============================================================
+  // SVG Path'leri Olustur
+  // ============================================================
+
+  // Kesim cizgileri (cut-line)
+  const cutPaths: string[] = [];
+
+  // Katlama cizgileri
+  const foldMountainPaths: string[] = [];
+  const foldValleyPaths: string[] = [];
+
+  // Yapistirma alanlari
+  const glueAreaPaths: string[] = [];
+
+  // ===== GLUE TAB =====
+  cutPaths.push(generateGlueTabPath(currentX, mainPanelY, glueFlapWidth, sidePanelHeight));
+  glueAreaPaths.push(generateGlueTabPath(currentX, mainPanelY, glueFlapWidth, sidePanelHeight));
+  foldMountainPaths.push(`M ${currentX + glueFlapWidth} ${mainPanelY} L ${currentX + glueFlapWidth} ${mainPanelY + sidePanelHeight}`);
+  currentX += glueFlapWidth;
+
+  // ===== B1 (Sol Yan Panel) =====
+  cutPaths.push(`M ${currentX} ${mainPanelY} L ${currentX + width} ${mainPanelY} L ${currentX + width} ${mainPanelY + sidePanelHeight} L ${currentX} ${mainPanelY + sidePanelHeight} Z`);
+
+  // B1 Dust Flaps
+  cutPaths.push(generateDustFlapPath(currentX, topDustY, width, dustFlapHeight, true));
+  cutPaths.push(generateDustFlapPath(currentX, bottomDustY, width, dustFlapHeight, false));
+  foldValleyPaths.push(`M ${currentX} ${mainPanelY} L ${currentX + width} ${mainPanelY}`);
+  foldValleyPaths.push(`M ${currentX} ${mainPanelY + sidePanelHeight} L ${currentX + width} ${mainPanelY + sidePanelHeight}`);
+
+  // B1-A1 arasi katlama
+  foldMountainPaths.push(`M ${currentX + width} ${topDustY} L ${currentX + width} ${bottomDustY + dustFlapHeight}`);
+  currentX += width;
+
+  // ===== A1 (On Panel - Ana) =====
+  cutPaths.push(`M ${currentX} ${mainPanelY} L ${currentX + length} ${mainPanelY} L ${currentX + length} ${mainPanelY + mainPanelHeight} L ${currentX} ${mainPanelY + mainPanelHeight} Z`);
+
+  // A1 Ust Dust Flap
+  cutPaths.push(generateDustFlapPath(currentX, topDustY, length, dustFlapHeight, true));
+  foldValleyPaths.push(`M ${currentX} ${topDustY + dustFlapHeight} L ${currentX + length} ${topDustY + dustFlapHeight}`);
+
+  // A1 Ust Tuck Flap (kilit centikli)
+  cutPaths.push(generateTuckFlapPath(currentX, topTuckY, length, tuckFlapHeight, true));
+  foldValleyPaths.push(`M ${currentX} ${topTuckY + tuckFlapHeight} L ${currentX + length} ${topTuckY + tuckFlapHeight}`);
+
+  // A1 Alt Dust Flap
+  cutPaths.push(generateDustFlapPath(currentX, bottomDustY, length, dustFlapHeight, false));
+  foldValleyPaths.push(`M ${currentX} ${bottomDustY} L ${currentX + length} ${bottomDustY}`);
+
+  // A1 Alt Tuck Flap (one kapanir)
+  cutPaths.push(generateTuckFlapPath(currentX, bottomTuckY, length, tuckFlapHeight, true));
+  foldValleyPaths.push(`M ${currentX} ${bottomTuckY} L ${currentX + length} ${bottomTuckY}`);
+
+  // A1-B2 arasi katlama
+  foldMountainPaths.push(`M ${currentX + length} ${topDustY} L ${currentX + length} ${bottomDustY + dustFlapHeight}`);
+  currentX += length;
+
+  // ===== B2 (Sag Yan Panel) =====
+  cutPaths.push(`M ${currentX} ${mainPanelY} L ${currentX + width} ${mainPanelY} L ${currentX + width} ${mainPanelY + sidePanelHeight} L ${currentX} ${mainPanelY + sidePanelHeight} Z`);
+
+  // B2 Dust Flaps
+  cutPaths.push(generateDustFlapPath(currentX, topDustY, width, dustFlapHeight, true));
+  cutPaths.push(generateDustFlapPath(currentX, bottomDustY, width, dustFlapHeight, false));
+  foldValleyPaths.push(`M ${currentX} ${mainPanelY} L ${currentX + width} ${mainPanelY}`);
+  foldValleyPaths.push(`M ${currentX} ${mainPanelY + sidePanelHeight} L ${currentX + width} ${mainPanelY + sidePanelHeight}`);
+
+  // B2-A2 arasi katlama
+  foldMountainPaths.push(`M ${currentX + width} ${topDustY} L ${currentX + width} ${bottomDustY + dustFlapHeight}`);
+  currentX += width;
+
+  // ===== A2 (Arka Panel) =====
+  cutPaths.push(`M ${currentX} ${mainPanelY} L ${currentX + length} ${mainPanelY} L ${currentX + length} ${mainPanelY + mainPanelHeight} L ${currentX} ${mainPanelY + mainPanelHeight} Z`);
+
+  // A2 Ust Dust Flap
+  cutPaths.push(generateDustFlapPath(currentX, topDustY, length, dustFlapHeight, true));
+  foldValleyPaths.push(`M ${currentX} ${topDustY + dustFlapHeight} L ${currentX + length} ${topDustY + dustFlapHeight}`);
+
+  // A2 Ust Tuck Flap (REVERSE - arkaya kapanir, bu yuzden mountain fold)
+  cutPaths.push(generateTuckFlapPath(currentX, topTuckY, length, tuckFlapHeight, true));
+  foldMountainPaths.push(`M ${currentX} ${topTuckY + tuckFlapHeight} L ${currentX + length} ${topTuckY + tuckFlapHeight}`);
+
+  // A2 Alt Dust Flap
+  cutPaths.push(generateDustFlapPath(currentX, bottomDustY, length, dustFlapHeight, false));
+  foldValleyPaths.push(`M ${currentX} ${bottomDustY} L ${currentX + length} ${bottomDustY}`);
+
+  // A2 Alt Tuck Flap
+  cutPaths.push(generateTuckFlapPath(currentX, bottomTuckY, length, tuckFlapHeight, true));
+  foldValleyPaths.push(`M ${currentX} ${bottomTuckY} L ${currentX + length} ${bottomTuckY}`);
+
+  // ============================================================
+  // SVG Icerigini Olustur
+  // ============================================================
+
+  // Die-line icerigi
+  const dieLineContent = cutPaths.map(path =>
+    `<path class="cut-line" d="${path}"/>`
+  ).join('\n    ');
+
+  // Fold mountain icerigi
+  const foldMountainContent = foldMountainPaths.map(path =>
+    `<path class="fold-mountain" d="${path}"/>`
+  ).join('\n    ');
+
+  // Fold valley icerigi
+  const foldValleyContent = foldValleyPaths.map(path =>
+    `<path class="fold-valley" d="${path}"/>`
+  ).join('\n    ');
+
+  // Glue area icerigi
+  const glueAreaContent = glueAreaPaths.map(path =>
+    `<path class="glue-area" d="${path}"/>`
+  ).join('\n    ');
+
+  // Bleed area
+  const bleedContent = `
+    <rect class="bleed-area" x="0" y="0" width="${flatWidth}" height="${flatHeight}" />`;
+
+  // Etiketler
+  const labelsContent = options.showLabels ? `
+    <text class="label" x="${flatWidth / 2}" y="${flatHeight / 2 - 5}">
+      ECMA A20.20.03.01 - Reverse Tuck End Box
+    </text>
+    <text class="dimension" x="${flatWidth / 2}" y="${flatHeight / 2 + 5}">
+      ${length} x ${width} x ${height} mm
+    </text>
+    <text class="technical-note" x="${bleed + 2}" y="${bleed - 0.5}">
+      Bleed: ${bleed}mm | Crease: ${creaseChannel.toFixed(2)}mm | Glue Flap: ${glueFlapWidth.toFixed(1)}mm | Tuck: ${tuckFlapHeight.toFixed(1)}mm
+    </text>
+    <text class="technical-note" x="${flatWidth - bleed - 2}" y="${bleed - 0.5}" text-anchor="end">
+      Sade Chocolate - ECMA Standart Die-Line
+    </text>` : '';
+
+  // Artwork area gosterimi
+  const artworkContent = `
+    <rect x="${bleed + glueFlapWidth + width}" y="${mainPanelY}"
+          width="${length}" height="${mainPanelHeight}"
+          fill="none" stroke="#CCCCCC" stroke-width="0.05" stroke-dasharray="2,2"/>
+    <text class="dimension" x="${bleed + glueFlapWidth + width + length/2}" y="${mainPanelY + mainPanelHeight/2}">
+      ON YUZ (A1)
+    </text>
+    <rect x="${bleed + glueFlapWidth + width + length + width}" y="${mainPanelY}"
+          width="${length}" height="${mainPanelHeight}"
+          fill="none" stroke="#CCCCCC" stroke-width="0.05" stroke-dasharray="2,2"/>
+    <text class="dimension" x="${bleed + glueFlapWidth + width + length + width + length/2}" y="${mainPanelY + mainPanelHeight/2}">
+      ARKA YUZ (A2)
+    </text>`;
+
+  // Tam SVG
+  const svg = `${createSVGHeader(flatWidth, flatHeight,
+    'Sade Chocolate ECMA A20.20.03.01 Die-Line',
+    `Reverse Tuck End Box: ${length}x${width}x${height}mm`,
+    resolution)}
+
+  ${createSVGStyles()}
+
+  ${createLayerGroup('bleed', bleedContent)}
+
+  <!-- Kesim Cizgileri -->
+  ${createLayerGroup('dieLine', dieLineContent)}
+
+  <!-- Dis Katlama (Mountain) -->
+  ${createLayerGroup('foldMountain', foldMountainContent)}
+
+  <!-- Ic Katlama (Valley) -->
+  <g id="Fold-Valley" inkscape:groupmode="layer" inkscape:label="Fold-Valley">
+    ${foldValleyContent}
+  </g>
+
+  <!-- Yapistirma Alani -->
+  ${createLayerGroup('glueArea', glueAreaContent)}
+
+  <!-- Artwork Alanlari -->
+  ${createLayerGroup('artwork', artworkContent, false)}
+
+  <!-- Etiketler -->
+  <g id="Labels" inkscape:groupmode="layer" inkscape:label="Labels">
+    ${labelsContent}
+  </g>
+
+  ${createRegistrationMarks(flatWidth, flatHeight, bleed)}
+  ${createColorBar(flatWidth, flatHeight, bleed)}
+
+</svg>`;
+
+  return {
+    svg,
+    filename: `sade-chocolate-ecma-a20-${length}x${width}x${height}.svg`,
+    dimensions: { width: flatWidth, height: flatHeight },
+    metadata: {
+      bleed,
+      creaseChannel,
+      colorProfile: 'FOGRA39',
+      resolution: resolution === 'print' ? 300 : 72,
+    },
+  };
 }
